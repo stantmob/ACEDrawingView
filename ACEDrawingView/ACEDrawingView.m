@@ -147,46 +147,38 @@
 
 - (void)updateCacheImage:(BOOL)redraw
 {
-    // init a context
-    UIGraphicsBeginImageContextWithOptions(self.bounds.size, NO, 0.0);
+    // Create renderer with the view's size
+    UIGraphicsImageRendererFormat *format = [UIGraphicsImageRendererFormat preferredFormat];
+    format.opaque = NO;
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:self.bounds.size format:format];
     
-    if (redraw) {
-        // erase the previous image
-        self.cacheImage = nil;
-        
-        // load previous image (if returning to screen)
-        
-        switch (self.drawMode) {
-            case ACEDrawingModeOriginalSize:
-                [[self.backgroundImage copy] drawAtPoint:CGPointZero];
-                break;
-            case ACEDrawingModeScale:
-                [[self.backgroundImage copy] drawInRect:self.bounds];
-                break;
+    // Generate the image using the renderer
+    self.image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *rendererContext) {
+        if (redraw) {
+            // erase the previous image
+            self.image = nil;
+            
+            // load previous image (if returning to screen)
+            switch (self.drawMode) {
+                case ACEDrawingModeOriginalSize:
+                    [[self.prev_image copy] drawAtPoint:CGPointZero];
+                    break;
+                case ACEDrawingModeScale:
+                    [[self.prev_image copy] drawInRect:self.bounds];
+                    break;
+            }
+            
+            // Redraw all the lines
+            for (id<ACEDrawingTool> tool in self.pathArray) {
+                [tool draw];
+            }
+            
+        } else {
+            // set the draw point
+            [self.image drawAtPoint:CGPointZero];
+            [self.currentTool draw];
         }
-        
-        // I need to redraw all the lines
-        for (id<ACEDrawingTool> tool in self.pathArray) {
-            [tool draw];
-        }
-        
-    } else {
-        // scale if needed (may be view's size is changed)
-        switch (self.drawMode) {
-            case ACEDrawingModeOriginalSize:
-                [self.cacheImage drawAtPoint:CGPointZero];
-                break;
-                
-            case ACEDrawingModeScale:
-                [self.cacheImage drawInRect:self.bounds];
-                break;
-        }
-        [self.currentTool draw];
-    }
-    
-    // store the image
-    self.cacheImage = UIGraphicsGetImageFromCurrentImageContext();
-    UIGraphicsEndImageContext();
+    }];
 }
 
 - (UIImage *)drawings
